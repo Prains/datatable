@@ -29,6 +29,7 @@ class MainpageTableClass {
     this._validationProps = validationProps;
   }
 
+  //т.к. в библиотеке нет возможности контролировать сохранение и отмену, имитируем клики по соответствующим кнопкам
   _stopEditingWithoutSaving = () => {
     const cancelEditingButton = document.querySelector(
       this._cancelEditButtonClass
@@ -36,6 +37,7 @@ class MainpageTableClass {
     cancelEditingButton.click();
   };
 
+  // то же самое, но для сохранения данных. вызывает валидацию
   _stopEditingWithSaving = () => {
     const acceptEditButton = document.querySelector(
       this._acceptEditButtonClass
@@ -43,35 +45,34 @@ class MainpageTableClass {
     acceptEditButton.click();
   };
 
-  _stopEditingIfEsc = (e: any) => {
-    if (e.key === "Escape") {
-      this._stopEditingWithoutSaving();
-      this._removeEventListeners();
-    }
-  };
-
-  _confirmDataIfEnter = (e: any) => {
+  // контролируем слушатель нажатия кнопок на документе
+  _controlEventListener = (e: any) => {
+    // не удаляем листенер на энтер, т.к. энтер провоцирует валидацию
     if (e.key === "Enter") {
       this._stopEditingWithSaving();
+    } else if (e.key === "Escape") {
+      this._stopEditingWithoutSaving();
+      this._removeEventListener();
     }
   };
 
-  _removeEventListeners = () => {
-    document.removeEventListener("keydown", this._stopEditingIfEsc);
-    document.removeEventListener("keydown", this._confirmDataIfEnter);
+  _removeEventListener = () => {
+    document.removeEventListener("keydown", this._controlEventListener);
   };
 
-  _addEventListeners = () => {
-    document.addEventListener("keydown", this._stopEditingIfEsc);
-    document.addEventListener("keydown", this._confirmDataIfEnter);
+  _addEventListener = () => {
+    document.addEventListener("keydown", this._controlEventListener);
   };
 
+  // начинаем редактировать и ставим листенеры
   _startEditingRow = (data: any) => {
     this._setEditingRows({ [data.id]: true, ...data });
-    this._addEventListeners();
+    this._addEventListener();
   };
 
+  // валидация полей
   validation = () => {
+    // получаем данные валидационного конфига
     const { validationConfiguration, errorCallback, inputFieldsIds } =
       this._validationProps;
 
@@ -92,6 +93,8 @@ class MainpageTableClass {
         continue;
       }
 
+      // т.к. в либе нет возможности получить доступ к инпутам напрямую,
+      // взаимодействуем с ними через документ благодаря айдишникам, установленным при рендере ячеек
       const inputField = document.getElementById(fieldId) as HTMLInputElement;
 
       // если не найден инпут в документе
@@ -104,8 +107,11 @@ class MainpageTableClass {
       const value = inputField.value.trim();
       const { regex, errorMessage } = fieldConfig;
 
+      // валидация инпутов значениями регекса из конфига
       if (!regex.test(value)) {
         // Если значение не соответствует регулярному выражению, устанавливаем ошибку
+        // напрямую через документ нельзя повесить таилвиндовский класс, т.к. он компилируется только через реактовский класснейм
+        // поэтому делаем кастомный класс в globals.css
         inputField.classList.add("error");
         errorCallback(`Ошибка валидации данных: ${errorMessage}`);
         isValid = false;
@@ -115,7 +121,8 @@ class MainpageTableClass {
       }
     }
 
-    if (isValid) this._removeEventListeners();
+    // если все валидно, убираем листенеры
+    if (isValid) this._removeEventListener();
 
     return isValid;
   };
@@ -123,9 +130,10 @@ class MainpageTableClass {
   onRowDoubleCick = (e: any) => {
     const rowData = e.data;
 
+    // если пользователь еще раз нажал двойной клик, а ячейки активны - убираем инпуты. данные не валидируем и не сохраняем, имитируем отказ
     if (this._editingRows[rowData.id]) {
       this._stopEditingWithoutSaving();
-      this._removeEventListeners();
+      this._removeEventListener();
       return;
     }
 
