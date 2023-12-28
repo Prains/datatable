@@ -1,5 +1,5 @@
 import Mainpage from "@/components/Mainpage/Mainpage";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../node_modules/.prisma/client";
 
 const getFakeData = async () => {
   // серверное действие - перед рендером страницы получаем фейковые данные с локальной бдшки
